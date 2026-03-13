@@ -6,14 +6,17 @@ import { useAuth } from '../firebase/auth';
 import { UnionEvent } from '../types';
 import { Plus, X, MapPin, Clock, Tag, Trash2, Calendar as CalendarIcon, Search } from 'lucide-react';
 import { formatDate, cn } from '../lib/utils';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { logActivity } from '../lib/activity';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 const Calendar: React.FC = () => {
   const { profile, isAdmin } = useAuth();
   const [events, setEvents] = useState<UnionEvent[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<UnionEvent | null>(null);
   const [newEvent, setNewEvent] = useState<Partial<UnionEvent>>({
     title: '',
     description: '',
@@ -67,23 +70,7 @@ const Calendar: React.FC = () => {
     }
   };
 
-  const handleDelete = async (event: UnionEvent) => {
-    if (!isAdmin || !profile) return;
-    if (window.confirm('Excluir este evento?')) {
-      try {
-        await deleteDoc(doc(db, 'events', event.id!));
-        await logActivity(
-          profile.uid,
-          profile.displayName || 'Usuário',
-          'delete',
-          'event',
-          `Excluiu o evento: ${event.title}`
-        );
-      } catch (err) {
-        handleFirestoreError(err, OperationType.DELETE, `events/${event.id}`);
-      }
-    }
-  };
+  // handleDelete removed - now handled in modal onConfirm
 
   const filteredEvents = events.filter(e => 
     e.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -144,7 +131,14 @@ const Calendar: React.FC = () => {
                 </span>
               </div>
               {isAdmin && (
-                <button onClick={() => handleDelete(event)} className="text-slate-300 dark:text-slate-700 hover:text-red-500 transition-colors">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEventToDelete(event);
+                    setShowDeleteModal(true);
+                  }}
+                  className="text-slate-300 dark:text-slate-700 hover:text-red-500 transition-colors p-1 -m-1"
+                >
                   <Trash2 size={18} />
                 </button>
               )}
@@ -170,6 +164,35 @@ const Calendar: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        title={eventToDelete?.title || ''}
+        description="Este evento será excluído permanentemente."
+        onClose={() => {
+          setShowDeleteModal(false);
+          setEventToDelete(null);
+        }}
+        onConfirm={async () => {
+          if (eventToDelete && profile) {
+            try {
+              await deleteDoc(doc(db, 'events', eventToDelete.id!));
+              await logActivity(
+                profile.uid,
+                profile.displayName || 'Usuário',
+                'delete',
+                'event',
+                `Excluiu o evento: ${eventToDelete.title}`
+              );
+            } catch (err) {
+              handleFirestoreError(err, OperationType.DELETE, `events/${eventToDelete.id}`);
+            }
+            setShowDeleteModal(false);
+            setEventToDelete(null);
+          }
+        }}
+        type="event"
+      />
 
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">

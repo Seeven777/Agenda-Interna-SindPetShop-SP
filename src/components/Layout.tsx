@@ -14,14 +14,38 @@ export type View = 'dashboard' | 'calendar' | 'legal' | 'tasks' | 'announcements
 const Layout: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    // Load from localStorage or system preference
+    const saved = localStorage.getItem('darkMode');
+    if (saved !== null) {
+      const initialDark = saved === 'true';
+      setIsDarkMode(initialDark);
+      if (initialDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } else {
+      // Default to system preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setIsDarkMode(prefersDark);
+      if (prefersDark) {
+        document.documentElement.classList.add('dark');
+      }
+    }
+  }, []);
   const { profile } = useAuth();
 
   useEffect(() => {
+    // Apply class change
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
+    // Save to localStorage
+    localStorage.setItem('darkMode', isDarkMode.toString());
   }, [isDarkMode]);
 
   const viewTitles: Record<View, string> = {

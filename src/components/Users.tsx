@@ -6,7 +6,7 @@ import { useAuth } from '../firebase/auth';
 import { UserProfile, UserRole } from '../types';
 import { User, Shield, ShieldAlert, ChevronRight, ArrowLeft } from 'lucide-react';
 import { formatDate, cn } from '../lib/utils';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 
 interface UsersProps {
   onBack: () => void;

@@ -6,14 +6,17 @@ import { useAuth } from '../firebase/auth';
 import { Announcement } from '../types';
 import { Plus, X, Megaphone, Trash2, User, Search } from 'lucide-react';
 import { formatDate, cn, getRelativeTime } from '../lib/utils';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { logActivity } from '../lib/activity';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 const Announcements: React.FC = () => {
   const { profile, isAdmin } = useAuth();
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [annToDelete, setAnnToDelete] = useState<Announcement | null>(null);
   const [newAnn, setNewAnn] = useState({ title: '', content: '', isUrgent: false });
 
   useEffect(() => {
@@ -116,22 +119,14 @@ const Announcements: React.FC = () => {
                 <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{ann.authorName}</span>
               </div>
               {isAdmin && (
-                <button onClick={async () => {
-                  if(window.confirm('Excluir este comunicado?') && profile) {
-                    try {
-                      await deleteDoc(doc(db, 'announcements', ann.id!));
-                      await logActivity(
-                        profile.uid,
-                        profile.displayName || 'Usuário',
-                        'delete',
-                        'announcement',
-                        `Excluiu o comunicado: ${ann.title}`
-                      );
-                    } catch (err) {
-                      handleFirestoreError(err, OperationType.DELETE, `announcements/${ann.id}`);
-                    }
-                  }
-                }} className="text-slate-300 dark:text-slate-700 hover:text-red-500 transition-colors">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setAnnToDelete(ann);
+                    setShowDeleteModal(true);
+                  }}
+                  className="text-slate-300 dark:text-slate-700 hover:text-red-500 transition-colors p-1 -m-1"
+                >
                   <Trash2 size={18} />
                 </button>
               )}
@@ -144,6 +139,35 @@ const Announcements: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        title={annToDelete?.title || ''}
+        description="Este comunicado será excluído permanentemente."
+        onClose={() => {
+          setShowDeleteModal(false);
+          setAnnToDelete(null);
+        }}
+        onConfirm={async () => {
+          if (annToDelete && profile) {
+            try {
+              await deleteDoc(doc(db, 'announcements', annToDelete.id!));
+              await logActivity(
+                profile.uid,
+                profile.displayName || 'Usuário',
+                'delete',
+                'announcement',
+                `Excluiu o comunicado: ${annToDelete.title}`
+              );
+            } catch (err) {
+              handleFirestoreError(err, OperationType.DELETE, `announcements/${annToDelete.id}`);
+            }
+            setShowDeleteModal(false);
+            setAnnToDelete(null);
+          }
+        }}
+        type="announcement"
+      />
 
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">

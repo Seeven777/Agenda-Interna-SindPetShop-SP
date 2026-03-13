@@ -4,7 +4,7 @@ import { db } from '../firebase/config';
 import { UnionEvent, LegalCase, Task, Announcement, Activity as ActivityType } from '../types';
 import { Calendar, Scale, CheckSquare, Megaphone, Clock, AlertCircle, TrendingUp, Users, FileText, Activity, History } from 'lucide-react';
 import { formatDate, cn, getRelativeTime } from '../lib/utils';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { View } from './Layout';
 

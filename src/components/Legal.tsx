@@ -6,8 +6,9 @@ import { useAuth } from '../firebase/auth';
 import { LegalCase } from '../types';
 import { Plus, X, Search, Filter, Scale, Trash2, ChevronRight } from 'lucide-react';
 import { formatDate, cn } from '../lib/utils';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { logActivity } from '../lib/activity';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 const Legal: React.FC = () => {
   const { profile, isAdmin } = useAuth();
@@ -15,8 +16,9 @@ const Legal: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('Todos');
-  
   const [selectedCase, setSelectedCase] = useState<LegalCase | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [caseToDelete, setCaseToDelete] = useState<LegalCase | null>(null);
   
   const [newCase, setNewCase] = useState<Partial<LegalCase>>({
     caseNumber: '',
@@ -284,22 +286,9 @@ const Legal: React.FC = () => {
 
               {isAdmin && (
                 <button 
-                  onClick={async () => {
-                    if (window.confirm('Excluir este processo permanentemente?') && profile) {
-                      try {
-                        await deleteDoc(doc(db, 'cases', selectedCase.id!));
-                        await logActivity(
-                          profile.uid,
-                          profile.displayName || 'Usuário',
-                          'delete',
-                          'case',
-                          `Excluiu o processo: ${selectedCase.caseNumber}`
-                        );
-                        setSelectedCase(null);
-                      } catch (err) {
-                        handleFirestoreError(err, OperationType.DELETE, `cases/${selectedCase.id}`);
-                      }
-                    }
+                  onClick={() => {
+                    setCaseToDelete(selectedCase!);
+                    setShowDeleteModal(true);
                   }}
                   className="w-full flex items-center justify-center gap-2 text-red-500 font-bold text-sm py-4 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-colors"
                 >

@@ -2,7 +2,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { handleFirestoreError, OperationType } from './firestore-errors';
 
-export type ActivityType = 'create' | 'update' | 'delete' | 'login';
+export type ActivityType = 'create' | 'update' | 'delete' | 'login' | 'comment';
 export type ResourceType = 'case' | 'task' | 'event' | 'announcement' | 'user';
 
 export const logActivity = async (

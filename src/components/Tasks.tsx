@@ -4,10 +4,14 @@ import { db } from '../firebase/config';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { useAuth } from '../firebase/auth';
 import { Task } from '../types';
-import { Plus, X, CheckCircle2, Circle, Clock, AlertTriangle, Trash2, Check, CheckSquare, Search } from 'lucide-react';
-import { formatDate, cn } from '../lib/utils';
-import { motion } from 'motion/react';
+import { Plus, X, CheckCircle2, Circle, Clock, AlertTriangle, Trash2, Check, CheckSquare, Search, MessageCircle } from 'lucide-react';
+import { formatDate, cn, getRelativeTime } from '../lib/utils';
+import { motion } from 'framer-motion';
 import { logActivity } from '../lib/activity';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
+import { Comment } from '../types';
+import { uploadFile } from '../lib/uploadFile';
+import { serverTimestamp } from 'firebase/firestore';
 
 const Tasks: React.FC = () => {
   const { profile, isAdmin } = useAuth();
@@ -15,6 +19,14 @@ const Tasks: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [filter, setFilter] = useState<'Todos' | 'Pendente' | 'Concluído'>('Todos');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [taskForComments, setTaskForComments] = useState<Task | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [newCommentContent, setNewCommentContent] = useState('');
+  const [newCommentFile, setNewCommentFile] = useState<File | null>(null);
+  const [uploadingComment, setUploadingComment] = useState(false);
   
   const [newTask, setNewTask] = useState<Partial<Task>>({
     title: '',
@@ -62,7 +74,11 @@ const Tasks: React.FC = () => {
     if (!profile) return;
     try {
       const newStatus = task.status === 'Concluído' ? 'Pendente' : 'Concluído';
-      await updateDoc(doc(db, 'tasks', task.id!), { status: newStatus });
+      await updateDoc(doc(db, 'tasks', task.id!), { 
+        status: newStatus,
+        updatedAt: new Date().toISOString(),
+        updatedBy: profile.uid,
+      });
       
       await logActivity(
         profile.uid,
@@ -75,6 +91,22 @@ const Tasks: React.FC = () => {
       handleFirestoreError(err, OperationType.UPDATE, `tasks/${task.id}`);
     }
   };
+
+  useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
+    if (taskForComments) {
+      const q = query(
+        collection(db, 'tasks', taskForComments.id!, 'comments'),
+        orderBy('createdAt', 'desc')
+      );
+      unsubscribe = onSnapshot(q, (snap) => {
+        setComments(snap.docs.map(d => ({ id: d.id, ...d.data() } as Comment)));
+      });
+    }
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [taskForComments]);
 
   const filteredTasks = tasks.filter(t => {
     const matchesFilter = filter === 'Todos' || t.status === filter;
@@ -188,31 +220,39 @@ const Tasks: React.FC = () => {
                   {formatDate(task.deadline)}
                 </span>
               </div>
+              <div className="flex items-center gap-4 mt-2 pt-2 border-t border-slate-200 dark:border-slate-700 text-[10px] text-slate-500 dark:text-slate-400">
+                <span>
+                  Criado por {task.createdBy} • {getRelativeTime(task.createdAt)}
+                </span>
+                {task.updatedAt && (
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    Atualizado há {getRelativeTime(task.updatedAt)}
+                  </span>
+                )}
+              </div>
             </div>
             {isAdmin && (
               <button 
-                onClick={async (e) => {
+                onClick={(e) => {
                   e.stopPropagation();
-                  if (window.confirm('Excluir esta tarefa?') && profile) {
-                    try {
-                      await deleteDoc(doc(db, 'tasks', task.id!));
-                      await logActivity(
-                        profile.uid,
-                        profile.displayName || 'Usuário',
-                        'delete',
-                        'task',
-                        `Excluiu a tarefa: ${task.title}`
-                      );
-                    } catch (err) {
-                      handleFirestoreError(err, OperationType.DELETE, `tasks/${task.id}`);
-                    }
-                  }
+                  setTaskToDelete(task);
+                  setShowDeleteModal(true);
                 }}
-                className="text-slate-300 dark:text-slate-700 hover:text-red-500 transition-colors p-2"
+                className="text-slate-300 dark:text-slate-700 hover:text-red-500 transition-colors p-2 -m-1"
               >
                 <Trash2 size={18} />
               </button>
             )}
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setTaskForComments(task);
+                setShowCommentsModal(true);
+              }}
+              className="text-slate-300 dark:text-slate-700 hover:text-blue-500 transition-colors p-2 -m-1"
+            >
+              <MessageCircle size={18} />
+            </button>
           </motion.div>
         )) : (
           <div className="text-center py-12">
@@ -221,6 +261,165 @@ const Tasks: React.FC = () => {
           </div>
         )}
       </div>
+
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        title={taskToDelete?.title || ''}
+        description="Esta tarefa será excluída permanentemente, incluindo comentários e anexos."
+        onClose={() => {
+          setShowDeleteModal(false);
+          setTaskToDelete(null);
+        }}
+        onConfirm={async () => {
+          if (taskToDelete && profile) {
+            try {
+              await deleteDoc(doc(db, 'tasks', taskToDelete.id!));
+              await logActivity(
+                profile.uid,
+                profile.displayName || 'Usuário',
+                'delete',
+                'task',
+                `Excluiu a tarefa: ${taskToDelete.title}`
+              );
+            } catch (err) {
+              handleFirestoreError(err, OperationType.DELETE, `tasks/${taskToDelete.id}`);
+            }
+            setShowDeleteModal(false);
+            setTaskToDelete(null);
+          }
+        }}
+        type="task"
+      />
+
+      {showCommentsModal && taskForComments && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <motion.div 
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="bg-white dark:bg-slate-900 w-full max-w-lg max-h-[80vh] rounded-[2.5rem] p-6 shadow-2xl overflow-y-auto"
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                Comentários - {taskForComments.title}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowCommentsModal(false);
+                  setTaskForComments(null);
+                  setComments([]);
+                  setNewCommentContent('');
+                  setNewCommentFile(null);
+                }}
+                className="bg-slate-100 dark:bg-slate-800 p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
+              {comments.length === 0 ? (
+                <p className="text-slate-400 dark:text-slate-600 text-center py-8 font-medium">Nenhum comentário ainda</p>
+              ) : (
+                comments.map((comment) => (
+                  <div key={comment.id} className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl">
+                    <div className="flex items-start gap-3 mb-2">
+                      <div className="w-8 h-8 bg-slate-200 dark:bg-slate-700 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-black text-slate-500">{comment.authorName[0]?.toUpperCase()}</span>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-bold text-slate-900 dark:text-white text-sm mb-1">{comment.authorName}</p>
+                        <p className="text-slate-600 dark:text-slate-300 leading-relaxed">{comment.content}</p>
+                        {comment.attachments && comment.attachments.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {comment.attachments.map((url, i) => (
+                              <a
+                                key={i}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-600 px-3 py-1 rounded-full font-bold hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                              >
+                                📎 Anexo {i + 1}
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2 font-bold uppercase tracking-wider">
+                          {getRelativeTime(comment.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <form 
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!profile || !taskForComments || !newCommentContent.trim()) return;
+                setUploadingComment(true);
+                try {
+                  let atts: string[] = [];
+                  if (newCommentFile) {
+                    const path = `comments/tasks/${taskForComments.id}/${Date.now()}-${newCommentFile.name}`;
+                    const url = await uploadFile(newCommentFile, path);
+                    atts = [url];
+                  }
+                  await addDoc(collection(db, 'tasks', taskForComments.id!, 'comments'), {
+                    content: newCommentContent,
+                    authorId: profile.uid,
+                    authorName: profile.displayName || 'Usuário',
+                    createdAt: serverTimestamp(),
+                    attachments: atts,
+                  });
+                  await updateDoc(doc(db, 'tasks', taskForComments.id!), {
+                    updatedAt: serverTimestamp(),
+                    updatedBy: profile.uid,
+                  });
+                  await logActivity(
+                    profile.uid,
+                    profile.displayName || 'Usuário',
+                    'comment',
+                    'task',
+                    `Adicionou comentário na tarefa: ${taskForComments.title}`
+                  );
+                  setNewCommentContent('');
+                  setNewCommentFile(null);
+                } catch (err) {
+                  handleFirestoreError(err, OperationType.CREATE, `tasks/${taskForComments.id}/comments`);
+                }
+                setUploadingComment(false);
+              }}
+              className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-700"
+            >
+              <textarea
+                placeholder="Adicionar comentário..."
+                className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none resize-none min-h-[80px] text-sm dark:text-white"
+                value={newCommentContent}
+                onChange={(e) => setNewCommentContent(e.target.value)}
+                disabled={uploadingComment}
+              />
+              <div className="flex gap-3 pt-2">
+                <input
+                  type="file"
+                  onChange={(e) => setNewCommentFile(e.target.files?.[0] || null)}
+                  className="flex-1 text-sm text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-slate-50 dark:file:bg-slate-800 file:text-slate-700 dark:file:text-slate-300 hover:file:bg-slate-100 dark:hover:file:bg-slate-700 transition-all cursor-pointer"
+                  disabled={uploadingComment}
+                />
+                <button
+                  type="submit"
+                  disabled={!newCommentContent.trim() || uploadingComment}
+                  className="flex-0 bg-emerald-600 text-white px-8 py-3 rounded-2xl font-black shadow-lg shadow-emerald-600/20 hover:shadow-emerald-600/30 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                >
+                  {uploadingComment ? 'Enviando...' : 'Comentar'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
 
       {showAddModal && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
