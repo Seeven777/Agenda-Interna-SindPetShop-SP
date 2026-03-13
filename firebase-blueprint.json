@@ -1,0 +1,94 @@
+{
+  "entities": {
+    "users": {
+      "title": "User",
+      "description": "Staff and Admin users of the union system",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "staff"] },
+        "photoURL": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "events": {
+      "title": "Event",
+      "description": "Calendar events and union activities",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "time": { "type": "string" },
+        "location": { "type": "string" },
+        "responsibleUserId": { "type": "string" },
+        "category": { "type": "string", "enum": ["Legal", "Union Activities", "Administrative", "Inspection", "Events"] },
+        "status": { "type": "string", "enum": ["Scheduled", "Completed", "Cancelled"] },
+        "notes": { "type": "string" },
+        "attachments": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["title", "date", "category", "status"]
+    },
+    "cases": {
+      "title": "Legal Case",
+      "description": "Legal department case management",
+      "type": "object",
+      "properties": {
+        "caseNumber": { "type": "string" },
+        "companyName": { "type": "string" },
+        "workerName": { "type": "string" },
+        "responsibleLawyerId": { "type": "string" },
+        "hearingDate": { "type": "string", "format": "date-time" },
+        "deadline": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["New", "In Progress", "Hearing Scheduled", "Completed", "Archived"] },
+        "notes": { "type": "string" },
+        "attachments": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["caseNumber", "companyName", "workerName", "status"]
+    },
+    "tasks": {
+      "title": "Task",
+      "description": "Internal staff tasks",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "responsibleUserId": { "type": "string" },
+        "deadline": { "type": "string", "format": "date-time" },
+        "priority": { "type": "string", "enum": ["High", "Medium", "Low"] },
+        "status": { "type": "string", "enum": ["Pending", "In Progress", "Completed"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["title", "responsibleUserId", "priority", "status"]
+    },
+    "announcements": {
+      "title": "Announcement",
+      "description": "Internal union communications",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "attachments": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "content", "authorId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "users", "description": "User profiles" },
+    "/events/{eventId}": { "schema": "events", "description": "Calendar events" },
+    "/cases/{caseId}": { "schema": "cases", "description": "Legal cases" },
+    "/tasks/{taskId}": { "schema": "tasks", "description": "Staff tasks" },
+    "/announcements/{announcementId}": { "schema": "announcements", "description": "Internal announcements" }
+  }
+}

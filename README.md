@@ -1,20 +1,67 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Union Internal Agenda
 
-# Run and deploy your AI Studio app
+Internal operational hub for workers union team management. Designed as a mobile-first Progressive Web App (PWA).
 
-This contains everything you need to run your app locally.
+## Features
 
-View your app in AI Studio: https://ai.studio/apps/2fd6d2a7-fadf-4e1c-b68e-50f131c45b3c
+- **Dashboard**: Real-time overview of agenda, hearings, and tasks.
+- **Calendar**: Manage union activities and events.
+- **Legal Module**: Case management system for legal staff.
+- **Task Management**: Internal task tracking with priority and status.
+- **Announcements**: Official internal communications.
+- **PWA**: Installable on iOS and Android with offline support.
+- **RBAC**: Role-based access control (Admin/Staff).
 
-## Run Locally
+## Tech Stack
 
-**Prerequisites:**  Node.js
+- **Frontend**: React, TypeScript, TailwindCSS, Lucide Icons, Motion.
+- **Backend**: Firebase (Auth, Firestore, Storage).
+- **Build Tool**: Vite.
 
+## Getting Started
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 1. Clone the repository
+```bash
+git clone <repository-url>
+cd union-internal-agenda
+```
+
+### 2. Install dependencies
+```bash
+npm install
+```
+
+### 3. Set environment variables
+Create a `.env` file based on `.env.example` and add your Firebase credentials.
+```env
+GEMINI_API_KEY=your_key
+APP_URL=your_app_url
+```
+Also ensure `firebase-applet-config.json` is present in the root directory.
+
+### 4. Run development server
+```bash
+npm run dev
+```
+
+### 5. Deploy to Vercel
+Connect your repository to Vercel and it will automatically deploy based on the `vite.config.ts`.
+
+## Database Structure (Firestore)
+
+- `users`: User profiles and roles.
+- `events`: Calendar events.
+- `cases`: Legal department cases.
+- `tasks`: Staff tasks.
+- `announcements`: Internal news.
+
+## Permissions
+
+- **Admin**: Full access to all modules, user management, and announcements.
+- **Staff**: View all content, manage tasks and events.
+
+## PWA Installation
+
+1. Open the app in your mobile browser.
+2. Tap "Share" (iOS) or the three dots (Android).
+3. Select "Add to Home Screen".
