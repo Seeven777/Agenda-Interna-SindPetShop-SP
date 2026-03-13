@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, addDoc, query, onSnapshot, orderBy, deleteDoc, doc, where } from 'firebase/firestore';
+import { collection, addDoc, query, onSnapshot, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { handleFirestoreError, OperationType } from '../lib/firestore-errors';
 import { useAuth } from '../firebase/auth';
@@ -9,6 +9,7 @@ import { formatDate, cn } from '../lib/utils';
 import { motion } from 'framer-motion';
 import { logActivity } from '../lib/activity';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
+import { showToast } from '../lib/toast';
 
 const Legal: React.FC = () => {
   const { profile, isAdmin } = useAuth();
@@ -40,25 +41,19 @@ const Legal: React.FC = () => {
 
   const handleAddCase = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile) return;
+    const mockProfile = profile || { uid: 'dev', displayName: 'Dev Admin' };
     try {
       await addDoc(collection(db, 'cases'), {
         ...newCase,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
-
-      await logActivity(
-        profile.uid,
-        profile.displayName || 'Usuário',
-        'create',
-        'case',
-        `Criou o processo: ${newCase.caseNumber}`
-      );
-
+      showToast('Processo criado com sucesso!');
+      await logActivity(mockProfile.uid, mockProfile.displayName || 'Usuário', 'create', 'case', `Criou o processo: ${newCase.caseNumber}`);
       setShowAddModal(false);
       setNewCase({ caseNumber: '', companyName: '', workerName: '', status: 'Novo', priority: 'Média' });
     } catch (err) {
+      showToast('Erro ao criar processo', 'error');
       handleFirestoreError(err, OperationType.CREATE, 'cases');
     }
   };
@@ -70,6 +65,20 @@ const Legal: React.FC = () => {
     const matchesStatus = statusFilter === 'Todos' || c.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const handleDeleteCase = async () => {
+    if (!caseToDelete || !profile) return;
+    try {
+      await deleteDoc(doc(db, 'cases', caseToDelete.id!));
+      showToast('Processo excluído com sucesso!');
+      await logActivity(profile.uid!, profile.displayName || 'Admin', 'delete', 'case', `Excluiu: ${caseToDelete.caseNumber}`);
+    } catch (err) {
+      showToast('Erro ao excluir processo', 'error');
+      handleFirestoreError(err, OperationType.DELETE, `cases/${caseToDelete.id}`);
+    }
+    setShowDeleteModal(false);
+    setCaseToDelete(null);
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -164,7 +173,7 @@ const Legal: React.FC = () => {
       </div>
 
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-4">
           <motion.div 
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -227,8 +236,9 @@ const Legal: React.FC = () => {
           </motion.div>
         </div>
       )}
+
       {selectedCase && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center justify-center p-4">
           <motion.div 
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -238,7 +248,6 @@ const Legal: React.FC = () => {
               <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Detalhes do Processo</h3>
               <button onClick={() => setSelectedCase(null)} className="bg-slate-100 dark:bg-slate-800 p-2 rounded-full text-slate-500"><X size={20} /></button>
             </div>
-            
             <div className="space-y-6">
               <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-3xl">
                 <div className="p-3 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-2xl">
@@ -287,7 +296,7 @@ const Legal: React.FC = () => {
               {isAdmin && (
                 <button 
                   onClick={() => {
-                    setCaseToDelete(selectedCase!);
+                    setCaseToDelete(selectedCase);
                     setShowDeleteModal(true);
                   }}
                   className="w-full flex items-center justify-center gap-2 text-red-500 font-bold text-sm py-4 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-colors"
@@ -300,6 +309,15 @@ const Legal: React.FC = () => {
           </motion.div>
         </div>
       )}
+
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        title={caseToDelete?.caseNumber || caseToDelete?.workerName || ''}
+        description="Processo e anexos excluídos permanentemente."
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteCase}
+        type="case"
+      />
     </div>
   );
 };
