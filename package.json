@@ -6,15 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview",
     "type-check": "tsc --noEmit",
-    "preview": "vite preview"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "firebase": "^10.14.1",
-    "framer-motion": "^11.18.2",
+    "framer-motion": "^11.0.0",
     "lucide-react": "^0.441.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
@@ -25,8 +25,8 @@
   },
   "devDependencies": {
     "@types/node": "^22.5.1",
-    "@types/react": "^18.3.28",
-    "@types/react-dom": "^18.3.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.7",
     "@typescript-eslint/eslint-plugin": "^8.57.0",
     "@typescript-eslint/parser": "^8.57.0",
     "autoprefixer": "^10.4.20",
@@ -36,8 +36,8 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "postcss": "^8.4.41",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.9.3",
-    "vite": "^5.4.21",
-    "vite-tsconfig-paths": "^4.3.2"
+    "typescript": "^5.2.4",
+    "vite": "^5.4.1",
+    "vite-tsconfig-paths": "^4.0.0"
   }
 }

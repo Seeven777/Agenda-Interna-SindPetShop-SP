@@ -1,12 +1,11 @@
-# TODO: Restructure Agenda SindPetShop-SP Project
+# TODO: Limpeza e Correção do Projeto Agenda-Interna-SindPetShop-SP
 
-## ✅ 0-9 PARTIAL (npm install done, running type-check/dev)
-## ✅ Core restructure: Vite 5, Tailwind cjs, Firebase env ready
+**Progresso: 6/7 concluído** ✅
 
-## 🔄 Tests running (terminal)
-## 🔄 10. Create .env.local from .env.example + your Firebase values → restart dev
-## 🔄 11. Test login Google, dark mode, tasks/comentários/anexos, PWA
-## 🔄 12. npm run build → deploy ready (Firebase Hosting)
-
-**Next:** Fill .env.local then test features.
-
+1. ✅ Limpar node_modules, dist, package-lock.json + npm cache clean
+2. ✅ Atualizar package.json (versões exatas, remover @vitejs/plugin-react)
+3. ✅ `npm install --legacy-peer-deps` (concluído)
+4. ✅ Editar vite.config.ts (remover React plugin)
+5. ✅ Editar tsconfig.json (compilerOptions exatos)
+6. ✅ Editar tailwind.config.cjs, postcss.config.cjs, src/firebase/config.ts
+7. ⏳ Criar .env.example + git commit/push + testes (type-check, build, dev)

@@ -15,10 +15,7 @@ pids
 *.seed
 *.pid.lock
 
-# Environment variables
-.env*
-.env.local
-!.env.example
+# Environment variables\n.env*\n!.env.example
 
 # IDE
 .vscode/settings.json
