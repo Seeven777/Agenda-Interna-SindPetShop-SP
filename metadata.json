@@ -1,0 +1,10 @@
+{
+  "name": "Union Internal Agenda",
+  "description": "Internal operational hub for workers union team management, including schedules, legal cases, tasks, and announcements.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation",
+    "notifications"
+  ]
+}
