@@ -29,6 +29,6 @@ export const onTokenRefresh = (callback: (token: string) => void) => {
 onMessage(messaging, (payload) => {
   console.log('Foreground notification:', payload);
   // Show toast or update UI
-  if (notificationSound) notificationSound.play();
+  // if (notificationSound) notificationSound.play(); // Comentado por agora
 });
 

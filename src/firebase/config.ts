@@ -28,5 +28,7 @@ try {
 export const auth = app ? getAuth(app) : null;
 export const db = app ? getFirestore(app) : null;
 export const storage = app ? getStorage(app) : null;
+export const messaging = app ? getMessaging(app) : null;
+import { getMessaging } from 'firebase/messaging';
 export default app || null;
 
